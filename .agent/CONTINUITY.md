@@ -28,6 +28,14 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   https://salixbloom.github.io/ffs-planner/ (200 [TOOL]).
 
 ## [PLANS]
+- 2026-10-25T09:50Z [USER] SMIRK embedding approved for redistribution (MIT, with attribution).
+  Scoping done; build order for the FLAME work, riskiest-last:
+  1. flame-shape.bin loader + embedding asset (small)
+  2. fit: alternating Procrustes pose / regularized linear LS for 100 betas (moderate)
+  3. silhouette correspondence for the jawline, recomputed per iteration (small - see 09:50Z)
+  4. regions redefined on FLAME topology, seeds derived and verified geometrically (moderate)
+  5. texture projection through the estimated camera + treatment of the untextured 38% (the risk)
+  M4 export and M1's output contract both change (5023 verts, not 468), so this lands before M4.
 - 2026-10-25T08:30Z [USER] DIRECTION SET: pull PLAN.md post-MVP item 3 (model fitting) forward,
   using FLAME 2023, and leave item 2 (photogrammetry mesh import) where it is. The jaw problem is
   topology, not scanning. NEXT BLOCKER: there is no MediaPipe-468 -> FLAME-5023 landmark
@@ -150,7 +158,30 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 - 2026-10-25T09:15Z [ASSUMPTION] Supplementing with oval/jawline correspondences is NOT just
   adding indices: silhouette landmarks slide over the surface with head pose (the classic contour
   -landmark problem in 3DMM fitting), so they need dynamic/sliding correspondence rather than
-  fixed vertex pairs. UNCONFIRMED how much that costs here.
+  fixed vertex pairs. SUPERSEDED by the 09:50Z measurement below - the cost is small HERE.
+- 2026-10-25T09:50Z [TOOL] SCOPING MEASUREMENT: the silhouette problem is cheap in this pipeline,
+  because we fit ONCE per capture (not per video frame) and capture is pose-gated to +/-12 deg.
+  FLAME orientation confirmed from the template: up = axis 1, forward = axis 2 (nose the most
+  protruding vertex at z +0.075, lowest vertex the neck at y -0.187). Frontal silhouette = 655
+  vertices, 231 of them below the nose (the jawline), spanning y -140..-10 mm.
+  Across the admitted poses (yaw/pitch +/-12, and combined) the silhouette VERTEX SET churns a
+  lot - Jaccard 0.57..0.65 - but the contour's PHYSICAL location moves only 1.10..2.32 mm, which
+  is below this pipeline's existing error. So a per-iteration recompute (the "dynamic" version) is
+  barely harder than a static ring, and costs ~15k edge tests per iteration = microseconds.
+- 2026-10-25T09:50Z [CODE] The fit is closed-form-ish, not a deep-learning problem: landmark
+  positions are LINEAR in the shape coefficients (barycentric interpolation of template + basis),
+  so with pose held fixed, solving for the 100 betas is regularized linear least squares
+  (105 landmarks x 3 = 315 equations). Alternate with Procrustes for pose. No autodiff framework,
+  no WASM, no WebGPU needed.
+- 2026-10-25T09:50Z [TOOL] THE REAL COST IS TEXTURE, NOT FITTING. A frontal capture leaves 38% of
+  FLAME's 5023 vertices untextured (1914: neck, ears, back of skull, crown); 67% are front-facing
+  and 62% fall within the captured mask's y range. Today UVs are trivial (UV = landmark image
+  coords); on a fitted head the frame must be projected through the estimated camera, and the
+  untextured 38% needs a deliberate visual treatment. That determines whether the result looks
+  credible or broken, and it is the main unknown.
+- 2026-10-25T09:50Z [ASSUMPTION] OPEN DESIGN DECISION for fitting: fit to MediaPipe x,y only
+  (honest - depth then comes from the prior) or include its non-metric z (uses bad data). Likely
+  answer is to include z at a much lower weight. UNCONFIRMED until tried.
 - 2026-10-25T08:30Z [TOOL] FLAME 2023 (flame2023_Open.pkl, 53 MB) inspected directly: 5023
   vertices, 9976 faces, metres. Arrays: shapedirs (5023,3,400) float64 = 48.2 MB (91% of the
   file), posedirs (5023,3,36) = 4.3 MB, v_template/weights/f/J/J_regressor all < 0.5 MB.
