@@ -1,9 +1,13 @@
 .git
+.gitattributes
+.gitignore
 .agent
 Dockerfile
 .dockerignore
 compose.yaml
-nginx.conf
 AGENTS.md
 PLAN.md
 README.md
+# nginx.conf is deliberately NOT ignored: the Dockerfile COPYs it out of the
+# build context. It also lands in the doc root as a side effect of `COPY .`,
+# which is harmless (no secrets, public repo).

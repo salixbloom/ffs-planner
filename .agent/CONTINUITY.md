@@ -39,8 +39,10 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 ## [PROGRESS]
 - 2026-10-24T20:15Z [CODE] Added `Dockerfile`, `nginx.conf`, `compose.yaml`, `.dockerignore`,
   `.gitignore`, placeholder `index.html`, this file.
-- 2026-10-24T20:25Z [TOOL] `docker compose config` parses clean. `docker compose build` and nginx
-  config syntax remain UNCONFIRMED (daemon down).
+- 2026-10-25T04:42Z [TOOL] SUPERSEDES the 20:25Z UNCONFIRMED build entry: container verified.
+  `docker compose up -d --build` succeeds (nginx 1.31.8); `GET http://localhost:8080/` → 200,
+  `Content-Type: text/html; charset=utf-8`, `Cache-Control: no-store`. Bind-mount live edits are
+  served without a rebuild.
 - 2026-10-24T20:40Z [TOOL] Remote `main` already held one commit (`f702899 Initial commit`,
   GPL-3.0 `LICENSE` only). Local commits were rebased onto it — linear history, LICENSE preserved,
   no force-push. Pushed to `origin/main`.
@@ -49,7 +51,12 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 - 2026-10-24T20:40Z [TOOL] Two GitHub identities exist on this machine. The default SSH key is
   Sinuboh; salixbloom is reachable only through the `github.com-salixbloom` alias. A plain
   `git@github.com:salixbloom/...` URL fails with a misleading "Repository not found".
-- 2026-10-24T20:40Z [CODE] Project is GPL-3.0 (LICENSE came from the remote's initial commit).
+- 2026-10-24T20:40Z [USER] Project license is GPL-3.0 (confirmed 2026-10-25); LICENSE came from
+  the remote's initial commit. Relevant to the post-MVP FLAME-fitting license check in PLAN.md.
+- 2026-10-25T04:42Z [TOOL] nginx serves `.wasm` as `application/wasm` out of the box — M1's
+  MediaPipe Tasks Vision load needs this, so no custom `types` block is required.
+- 2026-10-25T04:42Z [CODE] `.dockerignore` must NOT list `nginx.conf`: the Dockerfile COPYs it from
+  the build context, and ignoring it fails the build with `"/nginx.conf": not found`.
 - 2026-10-24T20:15Z [ASSUMPTION] Camera needs a secure context. `http://localhost:8080` qualifies,
   but a phone reaching the container over a LAN IP does NOT — on-device testing goes through the
   HTTPS GitHub Pages deploy, not this container.
