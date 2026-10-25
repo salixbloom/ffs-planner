@@ -107,6 +107,30 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   no force-push. Pushed to `origin/main`.
 
 ## [DISCOVERIES]
+- 2026-10-25T07:40Z [USER] The MediaPipe mesh is a face MASK bounded by the face oval - no skull,
+  ramus, neck or back of head. Pushing a region seeded on that rim moves the mesh's free edge
+  (a flange), not a volume, so jaw edits are not predictable. CONFIRMED by seed membership:
+  lower-jaw 6/6 seeds on the oval rim, jaw-angle 2/2 each side, forehead 3/4, chin 1/3, nose and
+  cheeks 0/n. This is why jaw-angle moves only 15 vertices against nose 149 and forehead 87 - the
+  Gaussian is one-sided, half its support falling where no vertices exist.
+  CONSEQUENCE FOR M3: a "jaw angle +8 mm" threshold would measure boundary displacement, not
+  bigonial width. Rim regions need either a landmark-measurement definition or a full-head mesh.
+- 2026-10-25T07:40Z [TOOL] LICENCE GATE RESOLVED (PLAN.md post-MVP item 3 said "after license
+  check"), from primary sources on 2026-10-25:
+  * FLAME 2023 is CC-BY 4.0 - commercial use AND redistribution permitted with attribution
+    (flame.is.tue.mpg.de/modellicense.html). FLAME 2017/2019/2020 remain non-commercial with NO
+    redistribution, so the 2023 release is the only usable one. Acceptable-use terms bar
+    pornographic and defamatory use. CC-BY is attribution-only, so it composes with this repo's
+    GPL-3.0 as long as attribution is preserved.
+  * ICT-FaceKit (USC-ICT) is MIT - commercial use and redistribution permitted.
+  * FLAME covers the full head: linear shape space from 3800 head scans plus an articulated jaw,
+    neck and eyeballs, pose-dependent correctives and expression blendshapes. Vertex count is
+    UNCONFIRMED (not stated on the model page).
+- 2026-10-25T07:40Z [ASSUMPTION] The jaw problem is a TOPOLOGY problem, not a scanning one.
+  Fitting a full-head template to the 468 landmarks we already capture would fix it without
+  photogrammetry; in-browser photogrammetry is not viable (COLMAP/Meshroom are desktop C++,
+  RealityScan is a separate app) and importing a scan does NOT by itself restore region editing,
+  because an arbitrary scan has no landmark correspondence. UNCONFIRMED until prototyped.
 - 2026-10-24T20:40Z [TOOL] Two GitHub identities exist on this machine. The default SSH key is
   Sinuboh; salixbloom is reachable only through the `github.com-salixbloom` alias. A plain
   `git@github.com:salixbloom/...` URL fails with a misleading "Repository not found".
