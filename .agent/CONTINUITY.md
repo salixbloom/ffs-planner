@@ -124,6 +124,33 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   no force-push. Pushed to `origin/main`.
 
 ## [DISCOVERIES]
+- 2026-10-25T09:15Z [TOOL] A published MediaPipe->FLAME correspondence exists and WORKS, but its
+  coverage is central-face only. Source: SMIRK (github.com/georgeretsi/smirk, MIT),
+  `assets/mediapipe_landmark_embedding/mediapipe_landmark_embedding.npz`, 4518 bytes. Format per
+  its own readme: 105 MediaPipe points embedded barycentrically in FLAME's surface, as
+  lmk_face_idx (FLAME triangle), lmk_b_coords (barycentric weights), landmark_indices (MediaPipe
+  vertex ids). flame-head-tracker was REJECTED as a source: its licence is NOASSERTION and it
+  disclaims third-party permissions.
+- 2026-10-25T09:15Z [TOOL] Embedding verified geometrically against MediaPipe's own
+  canonical_face_model.obj (468 verts) and FLAME's v_template, aligned by Umeyama similarity.
+  Structurally clean: 105 landmarks, triangle indices 3..8834 < 9976, barycentric sums exactly
+  1.000000, no negative weights, MediaPipe indices 0..466. Residual mean 2.96 mm, median 2.84,
+  p90 4.31, max 7.29 (calibrated at 10.122 mm/unit from a 90 mm outer canthal distance), against
+  45.05 mm for a scrambled control - 15.2x better than chance, so the mapping is real. NOTE the
+  residual also contains the genuine shape difference between two DIFFERENT mean faces, so it is
+  an upper bound on mapping error, not a measurement of it.
+- 2026-10-25T09:15Z [TOOL] COVERAGE GAP, decisive for this project: the embedding contains ZERO
+  of the 36 face-oval points, and none of the M2 seeds for forehead, cheeks, jaw-angle, lower-jaw
+  or chin (nose is 3/4; brows/eyes/mouth are covered). Embedded points span y -54..+52 mm of a
+  face spanning -95..+84 mm, so the bottom ~41 mm (chin and jawline) and top ~32 mm (upper
+  forehead) have no landmarks at all; 49 canonical vertices sit below the lowest embedded point.
+  CONSEQUENCE: fitting FLAME with this embedding alone leaves the jaw determined entirely by the
+  shape prior - including the jawline silhouette that MediaPipe DOES observe. That does not fix
+  the problem which motivated the FLAME work.
+- 2026-10-25T09:15Z [ASSUMPTION] Supplementing with oval/jawline correspondences is NOT just
+  adding indices: silhouette landmarks slide over the surface with head pose (the classic contour
+  -landmark problem in 3DMM fitting), so they need dynamic/sliding correspondence rather than
+  fixed vertex pairs. UNCONFIRMED how much that costs here.
 - 2026-10-25T08:30Z [TOOL] FLAME 2023 (flame2023_Open.pkl, 53 MB) inspected directly: 5023
   vertices, 9976 faces, metres. Arrays: shapedirs (5023,3,400) float64 = 48.2 MB (91% of the
   file), posedirs (5023,3,36) = 4.3 MB, v_template/weights/f/J/J_regressor all < 0.5 MB.
