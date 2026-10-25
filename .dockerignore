@@ -1,0 +1,9 @@
+.git
+.agent
+Dockerfile
+.dockerignore
+compose.yaml
+nginx.conf
+AGENTS.md
+PLAN.md
+README.md

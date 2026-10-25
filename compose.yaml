@@ -1,0 +1,8 @@
+services:
+  site:
+    build: .
+    ports:
+      - "8080:8080"
+    # Bind-mount the repo for live editing; drop this to test the baked image.
+    volumes:
+      - .:/usr/share/nginx/html:ro
