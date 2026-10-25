@@ -11,6 +11,7 @@ import { createLandmarker } from './landmarker.js';
 import { createCaptureSession, CAPTURE_PROMPTS } from './capture.js';
 import { buildFaceGeometry, captureTexture, estimateMmPerUnit } from './facemesh.js';
 import { createEditor } from './editor.js';
+import { createPanel } from './panel.js';
 
 const APP_VERSION = '0.3.0-m2';
 
@@ -23,6 +24,8 @@ const els = {
   bar: document.querySelector('#bar'),
   status: document.querySelector('#status'),
   diag: document.querySelector('#diag'),
+  panel: document.querySelector('#panel'),
+  grip: document.querySelector('#grip'),
   editor: document.querySelector('#editor'),
   symmetry: document.querySelector('#symmetry'),
   before: document.querySelector('#before'),
@@ -37,14 +40,18 @@ let session;
 let editor;
 let scaleMmPerUnit = null;
 
+const panel = createPanel({ panel: els.panel, grip: els.grip });
+
 function setStatus(text, isError = false) {
   els.status.textContent = text;
   els.status.classList.toggle('error', isError);
+  panel.refit();
 }
 
 function setProgress(fraction) {
   els.progress.hidden = fraction === null;
   els.bar.style.width = `${Math.round((fraction ?? 0) * 100)}%`;
+  panel.refit();
 }
 
 function refreshDiagnostics() {
@@ -94,6 +101,7 @@ function renderEdits({ edits }) {
       return li;
     }),
   );
+  panel.refit();
 }
 
 function startEditing(mesh) {
@@ -101,6 +109,7 @@ function startEditing(mesh) {
   editor = createEditor({ viewer, mesh, onChange: renderEdits });
   els.editor.hidden = false;
   editor.setSymmetry(els.symmetry.checked);
+  panel.refit();
 }
 
 function stopEditing() {
@@ -108,6 +117,7 @@ function stopEditing() {
   editor = null;
   els.editor.hidden = true;
   els.edits.replaceChildren();
+  panel.refit();
 }
 
 function onCaptureComplete({ landmarks, frames }) {
@@ -174,6 +184,7 @@ async function onStart() {
     setStatus('Camera running. Drag to orbit.');
     els.start.textContent = 'Stop camera';
     els.capture.hidden = false;
+    panel.refit();
   } catch (err) {
     setStatus(err.message, true);
     els.start.textContent = 'Start camera';

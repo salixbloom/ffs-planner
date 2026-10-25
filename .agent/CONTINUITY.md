@@ -21,6 +21,9 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   device. Modules js/{app,camera,viewer,landmarker,capture,facemesh,regions,editor}.js.
   window.__ffs exposes frameCount/cameraActive/hasFace/scaleMmPerUnit/captureState/edits plus
   _internals.{viewer,editor} for automated checks.
+- 2026-10-25T07:05Z [CODE] Layout is a flex column (banner / stage / panel); the panel takes space
+  FROM the viewer instead of covering it, and js/panel.js makes it drag-resizable and tap-to-
+  collapse. Added after the panel was found overlaying the lower face.
 - 2026-10-25T05:20Z [USER] M0 confirmed on iPhone: face correct, mesh stable. Pages live at
   https://salixbloom.github.io/ffs-planner/ (200 [TOOL]).
 
@@ -29,8 +32,8 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 - 2026-10-25T06:20Z [CODE] Next: M3 achievability zones - limits.json with placeholder per-region
   thresholds, colour + message on crossing. Edits are already millimetre amounts per region id
   (editor summary), which is exactly the shape the thresholds compare against.
-- 2026-10-25T06:20Z [CODE] M2 is unverified VISUALLY: the automation browser window was minimised
-  (viewport 0x0, screenshots timing out), so edits were checked numerically only.
+- 2026-10-25T07:05Z [TOOL] SUPERSEDES the 06:20Z "M2 unverified visually" entry: the window came
+  back and M2 was confirmed visually (see OUTCOMES).
 - 2026-10-25T05:35Z [CODE] Open follow-up: iris-derived scale reads ~5-8% small (see OUTCOMES).
   Do NOT fudge a correction factor from one sample; settle it with the reference-scan accuracy
   check that PLAN.md lists as the first post-MVP item.
@@ -70,6 +73,14 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 - 2026-10-25T06:20Z [CODE] Edits are stored as mm per region id and never baked into the mesh;
   displayed positions are always base + sum(edits). That is what gives exact compare/reset, and
   is the form M4 needs to store edits separately from the scan.
+- 2026-10-25T07:05Z [USER] The bottom panel must never push the 3D preview out of view: it either
+  drags away or takes its space from the viewer. Both were implemented - flex layout so the stage
+  shrinks rather than being covered, plus a grip to drag/collapse.
+- 2026-10-25T07:05Z [CODE] The panel sets an explicit pixel height only once the user drags or
+  taps it; until then it sizes to content. panel.refit() is called from the few functions that
+  change panel contents (setStatus, setProgress, renderEdits, start/stopEditing, capture reveal)
+  so a user-set height does not clip newly added controls. Deliberately NOT a ResizeObserver on
+  the panel body: panel height drives body height, so that would feed back on itself.
 - 2026-10-25T06:20Z [CODE] Drag sensitivity is DELIBERATELY not 1:1 handle-follows-finger. One
   screen height is ~300 mm at normal viewing distance, so tracking the finger made the smallest
   nudge bigger than any realistic change (a 60 px drag gave -79 mm on the brow). Rate is now
@@ -85,6 +96,8 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   viewer gained showFace/clearFace/setFrameCallback; capture button + progress bar.
 - 2026-10-25T06:20Z [CODE] Added M2: js/regions.js, js/editor.js; viewer exposes camera/controls;
   editor UI (symmetry toggle, hold-to-compare, reset all, per-region reset).
+- 2026-10-25T07:05Z [CODE] Added js/panel.js and reflowed index.html to a flex column; banner and
+  panel are in normal flow (were position:fixed), body height is 100dvh.
 - 2026-10-25T04:42Z [TOOL] SUPERSEDES the 20:25Z UNCONFIRMED build entry: container verified.
   `docker compose up -d --build` succeeds (nginx 1.31.8); `GET http://localhost:8080/` → 200,
   `Content-Type: text/html; charset=utf-8`, `Cache-Control: no-store`. Bind-mount live edits are
@@ -171,5 +184,16 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
       guarded on both canvas size and non-finite amounts.
   (3) Drag sensitivity exploded near the alignment clamp (60 px = -79 mm on the brow). See
       DECISIONS - the rate is now tied to region radius.
-  NOT VERIFIED: how the edits LOOK. The automation window was minimised, so no screenshot was
-  possible; a human still needs to confirm the reshaping reads as plausible anatomy.
+  NOT VERIFIED AT 06:20: how the edits LOOK - resolved at 07:05 below.
+- 2026-10-25T07:05Z [TOOL] M2 CONFIRMED VISUALLY once the browser window was restored. Jaw angle
+  +9.6 mm (both sides via symmetry), chin +8.1 mm, brow +9.2 mm render as a squared, wider lower
+  face with a longer chin and a fuller brow - smooth, no tearing or spikes, texture stretching
+  with the geometry. Hold-to-compare visibly restores the narrower original and moves the handles
+  back to base positions. The jaw-angle region reads as a genuine jaw change rather than a local
+  bump, which answers the earlier worry about it moving only 15 vertices.
+- 2026-10-25T07:05Z [TOOL] Panel layout verified at 1920x911: banner 33 + stage 640 + panel 238 =
+  911, stage bottom meets panel top exactly (no overlap). Tap collapses the panel to 26 px and
+  hands 212 px to the viewer (camera aspect 3.000 -> 2.236, drawing buffer resized to match);
+  tapping again restores; dragging down 120 px leaves the panel at 118 px; dragging up 400 px
+  clamps at the natural 238 px instead of growing without bound. With a face captured, all 10
+  handles sit inside the viewer rect, the lowest (chin, y 431) well clear of the panel at y 567.

@@ -49,6 +49,7 @@ No build step. Plain ES modules with an import map; dependencies load from jsDel
 | `js/facemesh.js` | landmarks to a textured mesh in millimetres |
 | `js/regions.js` | region seed landmarks and Gaussian vertex weights |
 | `js/editor.js` | handle dragging, symmetry, compare, reset |
+| `js/panel.js` | resizable/collapsible control panel |
 | `Dockerfile`, `compose.yaml`, `nginx.conf` | local static server |
 
 ## Licence
