@@ -9,10 +9,12 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
 ## State
 - 2026-10-24T20:15Z [TOOL] Repo initialized at `C:\Code\ffs-planner`, branch `main`.
   Remote `origin` = `git@github.com:salixbloom/ffs-planner.git`. Nothing pushed yet.
-- 2026-10-24T20:15Z [TOOL] `git ls-remote origin` → "Repository not found". SSH to github.com
-  authenticates as user **Sinuboh**; local git identity is **Willow Bloom
-  <salixbloom@users.noreply.github.com>**. Either the repo does not exist yet or the Sinuboh key
-  has no access to it. `gh` CLI is not installed, so the repo cannot be created from here.
+- 2026-10-24T20:40Z [TOOL] SUPERSEDES the 20:15Z "Repository not found" entry: the repo exists.
+  `~/.ssh/config` defines host alias `github.com-salixbloom` → github.com with
+  `IdentityFile ~/.ssh/id_ed25519_salixbloom`, `IdentitiesOnly yes`. Bare `git@github.com`
+  resolves to the default key, which authenticates as **Sinuboh** and cannot see the repo.
+  Origin URL is now `git@github.com-salixbloom:salixbloom/ffs-planner.git` — always use the alias
+  for this repo. `gh` CLI is not installed.
 - 2026-10-24T20:15Z [TOOL] Docker CLI 28.1.1 / Compose v2.35.1 present; daemon NOT running
   (Docker Desktop stopped), so `docker compose build` is UNCONFIRMED.
 - 2026-10-24T20:15Z [CODE] No application code exists. `index.html` is a placeholder only.
@@ -39,13 +41,15 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   `.gitignore`, placeholder `index.html`, this file.
 - 2026-10-24T20:25Z [TOOL] `docker compose config` parses clean. `docker compose build` and nginx
   config syntax remain UNCONFIRMED (daemon down).
-- 2026-10-24T20:25Z [TOOL] Two commits on `main`, both local. `git push --dry-run -u origin main`
-  → "Repository not found" (same as ls-remote). Push is blocked until the remote exists and the
-  authenticating key has access.
+- 2026-10-24T20:40Z [TOOL] Remote `main` already held one commit (`f702899 Initial commit`,
+  GPL-3.0 `LICENSE` only). Local commits were rebased onto it — linear history, LICENSE preserved,
+  no force-push. Pushed to `origin/main`.
 
 ## [DISCOVERIES]
-- 2026-10-24T20:15Z [TOOL] SSH identity (Sinuboh) ≠ git commit identity (salixbloom). Pushes may
-  fail or land under the wrong account; resolve before relying on push.
+- 2026-10-24T20:40Z [TOOL] Two GitHub identities exist on this machine. The default SSH key is
+  Sinuboh; salixbloom is reachable only through the `github.com-salixbloom` alias. A plain
+  `git@github.com:salixbloom/...` URL fails with a misleading "Repository not found".
+- 2026-10-24T20:40Z [CODE] Project is GPL-3.0 (LICENSE came from the remote's initial commit).
 - 2026-10-24T20:15Z [ASSUMPTION] Camera needs a secure context. `http://localhost:8080` qualifies,
   but a phone reaching the container over a LAN IP does NOT — on-device testing goes through the
   HTTPS GitHub Pages deploy, not this container.
