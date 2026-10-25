@@ -221,6 +221,11 @@ export function createEditor({ viewer, mesh, onChange }) {
       onChange?.(summary());
     },
 
+    /** Handles belong to the scan mesh, so they hide with it. */
+    setHandlesVisible(visible) {
+      handles.visible = visible;
+    },
+
     reset(id) {
       const region = regionById(id);
       edits.delete(id);

@@ -6,8 +6,10 @@ face data never leaves the device unless you export it.
 
 See [PLAN.md](PLAN.md) for scope and milestones, and `.agent/CONTINUITY.md` for current state.
 
-**Status: M2 (editor).** Start the camera, hold still looking straight ahead, then drag the
-handles to reshape ten face regions. Achievability zones land in M3.
+**Status: M2 (editor) + head fitting.** Start the camera, hold still looking straight ahead, then
+drag the handles to reshape ten face regions. The same landmarks are also fitted to a full-head
+FLAME model, viewable with "Show fitted head"; region editing still works on the scan mask until
+the regions are redefined on the fitted topology.
 
 Scale comes from iris width (assumed 11.7 mm) and is approximate: measured against a reference
 portrait it reads roughly 5-8% small, and MediaPipe's depth axis is not metric at all.
@@ -49,9 +51,12 @@ No build step. Plain ES modules with an import map; dependencies load from jsDel
 | `js/facemesh.js` | landmarks to a textured mesh in millimetres |
 | `js/regions.js` | region seed landmarks and Gaussian vertex weights |
 | `js/editor.js` | handle dragging, symmetry, compare, reset |
+| `js/flame.js` | FLAME basis loading and shape evaluation |
+| `js/fit.js` | fitting the head model to captured landmarks |
 | `js/panel.js` | resizable/collapsible control panel |
 | `flame/` | compact FLAME 2023 shape basis (see Head model) |
 | `tools/prepare-flame.py` | regenerates that basis from the published model |
+| `tools/prepare-embedding.py` | regenerates the MediaPipe correspondence |
 | `Dockerfile`, `compose.yaml`, `nginx.conf` | local static server |
 
 ## Head model
@@ -75,6 +80,18 @@ python tools/prepare-flame.py ~/Downloads/FLAME2023Open.zip --components 100
 
 Only the **2023** release is usable here: FLAME 2017/2019/2020 are licensed for non-commercial
 research with no redistribution, so they cannot be shipped in this repo.
+
+## Landmark correspondence
+
+`flame/mediapipe-embedding.json` is derived from
+[SMIRK](https://github.com/georgeretsi/smirk) (MIT, Copyright (c) 2024 George Retsinas), which
+places 105 MediaPipe landmarks barycentrically on FLAME's surface. Verified against MediaPipe's
+own `canonical_face_model.obj`: 2.96 mm mean residual after similarity alignment, against 45 mm
+for a scrambled control.
+
+It covers the central face only — no jawline, chin or forehead points — so the fitter adds the
+jaw outline separately from MediaPipe's face-oval landmarks, re-matched to the model's silhouette
+on each iteration.
 
 ## Accuracy
 

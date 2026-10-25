@@ -35,6 +35,7 @@ export function createViewer(canvas) {
   scene.add(testMesh);
 
   let face = null;
+  let fitted = null;
 
   function frameObject(object) {
     object.geometry.computeBoundingSphere();
@@ -58,6 +59,14 @@ export function createViewer(canvas) {
     face = null;
   }
 
+  function disposeFitted() {
+    if (!fitted) return;
+    scene.remove(fitted);
+    fitted.geometry.dispose();
+    fitted.material.dispose();
+    fitted = null;
+  }
+
   function resize() {
     const { clientWidth: w, clientHeight: h } = canvas;
     if (!w || !h) return;
@@ -72,7 +81,7 @@ export function createViewer(canvas) {
 
   renderer.setAnimationLoop((time) => {
     frame += 1;
-    if (!face) {
+    if (!face && !fitted) {
       testMesh.rotation.x += 0.004;
       testMesh.rotation.y += 0.007;
     }
@@ -114,8 +123,32 @@ export function createViewer(canvas) {
       return face;
     },
 
+    /**
+     * The fitted FLAME head, shown instead of the scan when selected.
+     * Untextured for now — projecting the captured frame onto it comes later.
+     */
+    showFittedHead(geometry) {
+      disposeFitted();
+      fitted = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial({ flatShading: false }));
+      fitted.visible = false;
+      scene.add(fitted);
+      return fitted;
+    },
+
+    get hasFittedHead() { return Boolean(fitted); },
+
+    /** @param {'scan'|'fitted'} mode */
+    setView(mode) {
+      const wantFitted = mode === 'fitted' && Boolean(fitted);
+      if (face) face.visible = !wantFitted;
+      if (fitted) fitted.visible = wantFitted;
+      frameObject(wantFitted ? fitted : face);
+      return wantFitted ? 'fitted' : 'scan';
+    },
+
     clearFace() {
       disposeFace();
+      disposeFitted();
       scene.add(testMesh);
       camera.position.set(0, 0, 4);
       controls.target.set(0, 0, 0);
@@ -127,6 +160,7 @@ export function createViewer(canvas) {
       renderer.setAnimationLoop(null);
       controls.dispose();
       disposeFace();
+      disposeFitted();
       testMesh.geometry.dispose();
       testMesh.material.dispose();
       renderer.dispose();

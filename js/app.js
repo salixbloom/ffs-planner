@@ -9,11 +9,15 @@ import { startCamera, stopCamera, describeStream } from './camera.js';
 import { createViewer, describeRenderer } from './viewer.js';
 import { createLandmarker } from './landmarker.js';
 import { createCaptureSession, CAPTURE_PROMPTS } from './capture.js';
-import { buildFaceGeometry, captureTexture, estimateMmPerUnit } from './facemesh.js';
+import {
+  buildFaceGeometry, captureTexture, estimateMmPerUnit, landmarksToIsotropic,
+} from './facemesh.js';
+import { loadFlame, buildHeadGeometry } from './flame.js';
+import { fitShape } from './fit.js';
 import { createEditor } from './editor.js';
 import { createPanel } from './panel.js';
 
-const APP_VERSION = '0.3.0-m2';
+const APP_VERSION = '0.4.0-fit';
 
 const els = {
   feed: document.querySelector('#feed'),
@@ -26,6 +30,7 @@ const els = {
   diag: document.querySelector('#diag'),
   panel: document.querySelector('#panel'),
   grip: document.querySelector('#grip'),
+  viewToggle: document.querySelector('#viewToggle'),
   editor: document.querySelector('#editor'),
   symmetry: document.querySelector('#symmetry'),
   before: document.querySelector('#before'),
@@ -39,6 +44,8 @@ let landmarker;
 let session;
 let editor;
 let scaleMmPerUnit = null;
+let flame = null;
+let fit = null;
 
 const panel = createPanel({ panel: els.panel, grip: els.grip });
 
@@ -62,6 +69,10 @@ function refreshDiagnostics() {
     ['camera', stream ? describeStream(stream) : 'off'],
     ['model', landmarker ? 'loaded' : 'not loaded'],
     ['scale', scaleMmPerUnit ? `${scaleMmPerUnit.toFixed(1)} mm/unit (approx, from iris)` : '—'],
+    ['fit', fit
+      ? `residual ${fit.residualMm.toFixed(2)} mm · ${fit.silhouettePoints} jaw points · `
+        + `${fit.mmPerUnit.toFixed(1)} mm/unit from model`
+      : 'not fitted'],
   ];
   els.diag.replaceChildren(
     ...rows.map(([label, value]) => {
@@ -139,6 +150,36 @@ function onCaptureComplete({ landmarks, frames }) {
   els.capture.textContent = 'Retake';
   startEditing(mesh);
   setStatus(`Captured from ${frames} frames. Drag a handle to reshape a region.`);
+
+  fitHead(landmarks, aspect);
+}
+
+/**
+ * Fits the full-head model to the same landmarks. The scan mesh is a face mask
+ * with no jaw behind its own edge; the fitted head is what region editing will
+ * move onto once its regions are defined.
+ */
+async function fitHead(landmarks, aspect) {
+  try {
+    if (!flame) {
+      setStatus('Loading the head model…');
+      flame = await loadFlame();
+    }
+    const targets = landmarksToIsotropic(landmarks, aspect);
+    const started = performance.now();
+    fit = fitShape(flame, targets);
+    fit.elapsedMs = Math.round(performance.now() - started);
+
+    const geometry = buildHeadGeometry(flame, fit.positions);
+    viewer.showFittedHead(geometry);
+    els.viewToggle.hidden = false;
+    setStatus(`Captured. Head fitted in ${fit.elapsedMs} ms — drag a handle, or compare views.`);
+  } catch (err) {
+    setStatus(`Head model failed: ${err?.message || err}`, true);
+  } finally {
+    refreshDiagnostics();
+    panel.refit();
+  }
 }
 
 function endCapture() {
@@ -152,6 +193,10 @@ function endCapture() {
 async function onCapture() {
   if (viewer.hasFace) {
     stopEditing();
+    els.viewToggle.hidden = true;
+    els.viewToggle.dataset.view = 'scan';
+    els.viewToggle.textContent = 'Show fitted head';
+    fit = null;
     viewer.clearFace();
     els.feed.hidden = false;
     els.capture.textContent = 'Capture face';
@@ -203,6 +248,10 @@ function onStop() {
   els.feed.hidden = false;
   els.capture.hidden = true;
   els.capture.textContent = 'Capture face';
+  els.viewToggle.hidden = true;
+  els.viewToggle.dataset.view = 'scan';
+  els.viewToggle.textContent = 'Show fitted head';
+  fit = null;
   viewer.clearFace();
   els.start.textContent = 'Start camera';
   setStatus('Camera off. Nothing leaves this device.');
@@ -213,6 +262,18 @@ els.start.addEventListener('click', () => (stream ? onStop() : onStart()));
 els.capture.addEventListener('click', onCapture);
 els.symmetry.addEventListener('change', () => editor?.setSymmetry(els.symmetry.checked));
 els.resetAll.addEventListener('click', () => editor?.resetAll());
+
+// Scan mask vs fitted head. Editing still belongs to the scan until the regions
+// are redefined on the fitted topology.
+els.viewToggle.addEventListener('click', () => {
+  const next = els.viewToggle.dataset.view === 'fitted' ? 'scan' : 'fitted';
+  const shown = viewer.setView(next);
+  els.viewToggle.dataset.view = shown;
+  els.viewToggle.textContent = shown === 'fitted' ? 'Show scan' : 'Show fitted head';
+  els.editor.hidden = shown === 'fitted';
+  editor?.setHandlesVisible(shown === 'scan');
+  panel.refit();
+});
 
 // Press and hold to see the unedited scan, so comparison needs no extra state.
 for (const [event, showBase] of [
@@ -250,8 +311,16 @@ window.__ffs = {
   get scaleMmPerUnit() { return scaleMmPerUnit; },
   get captureState() { return session?.state ?? 'idle'; },
   get edits() { return editor?.summary.edits ?? []; },
+  get fit() {
+    return fit && {
+      residual: fit.residual, residualMm: fit.residualMm, mmPerUnit: fit.mmPerUnit,
+      silhouettePoints: fit.silhouettePoints, elapsedMs: fit.elapsedMs,
+      betas: Array.from(fit.betas),
+    };
+  },
   _internals: {
     get viewer() { return viewer; },
     get editor() { return editor; },
+    get flame() { return flame; },
   },
 };

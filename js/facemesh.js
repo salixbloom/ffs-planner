@@ -66,6 +66,21 @@ function toIsotropic(landmark, aspect) {
 }
 
 /**
+ * All landmarks in isotropic units, flattened — the form the shape fitter
+ * consumes, where index i covers MediaPipe landmark i.
+ */
+export function landmarksToIsotropic(landmarks, aspect) {
+  const out = new Float32Array(landmarks.length * 3);
+  for (let i = 0; i < landmarks.length; i += 1) {
+    const [x, y, z] = toIsotropic(landmarks[i], aspect);
+    out[i * 3] = x;
+    out[i * 3 + 1] = y;
+    out[i * 3 + 2] = z;
+  }
+  return out;
+}
+
+/**
  * Millimetres per isotropic unit, from iris width.
  * Approximate: it assumes an average iris and ignores perspective.
  */

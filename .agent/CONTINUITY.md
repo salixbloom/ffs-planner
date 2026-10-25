@@ -113,6 +113,11 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   decides direction only.
 
 ## [PROGRESS]
+- 2026-10-25T10:40Z [CODE] Built steps 1-3 of the FLAME plan: js/flame.js (basis loading, shape
+  evaluation, landmark Jacobian, head geometry), js/fit.js (Horn similarity alignment, Cholesky
+  normal-equation solve, per-iteration jaw silhouette matching), tools/prepare-embedding.py,
+  flame/mediapipe-embedding.json, and a Show fitted head / Show scan toggle. Region editing still
+  operates on the scan mask; handles hide with it.
 - 2026-10-24T20:15Z [CODE] Added `Dockerfile`, `nginx.conf`, `compose.yaml`, `.dockerignore`,
   `.gitignore`, placeholder `index.html`, this file.
 - 2026-10-25T05:10Z [CODE] Added M0: `index.html`, `js/app.js`, `js/camera.js`, `js/viewer.js`,
@@ -264,6 +269,23 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   HTTPS GitHub Pages deploy, not this container.
 
 ## [OUTCOMES]
+- 2026-10-25T10:40Z [TOOL] FIT WORKING, verified against the portrait capture. 8 iterations in
+  ~160 ms. Mean landmark residual 2.33 mm. 18 jaw silhouette points matched per iteration.
+  Coefficients plausible: max 2.74 sigma, rms 0.607, none hitting the +/-4 clamp. Fitted head
+  bbox 226 x 355 x 230 mm (full head with neck).
+  ANATOMY, and this is the useful part: fitted outer canthal width is 90.5 mm, inside the
+  88-92 mm adult reference range, where the scan MASK gave 84.3 mm (too small). Mouth width
+  52.8 mm, in range.
+  INDEPENDENT SCALE CHECK: the fit implies 600.5 mm/unit against the iris estimate's 570.8, i.e.
+  the iris method reads 5.2% SMALL - same direction and magnitude as the 5-8% shortfall measured
+  against anatomical references at 05:35Z, from a completely different source of information.
+  BUG FOUND AND FIXED during this work: the shape coefficients all solved to exactly zero. The
+  Jacobian is in millimetres but the targets arrive in isotropic units ~1/570 the size, so the
+  ridge term outweighed the data term by roughly 300x and pinned every coefficient at the mean.
+  Rows are now normalised to millimetres, which also makes REGULARISATION interpretable as an
+  assumed landmark noise variance (9 mm^2 = trust a landmark to ~3 mm).
+- 2026-10-25T10:40Z [ASSUMPTION] DEPTH_WEIGHT 0.3, SILHOUETTE_WEIGHT 0.6, REGULARISATION 9 and
+  BETA_LIMIT 4 are all first guesses that produced sane output on ONE portrait. None are tuned.
 - 2026-10-25T05:10Z [TOOL] M0 verified in desktop Chrome at `http://localhost:8080`: modules load
   with zero console messages, WebGL2 context (ANGLE/D3D11), render loop advances, and the WebGL
   canvas composites over the video instead of occluding it (checked with a synthetic green feed).
