@@ -88,6 +88,8 @@ export function createViewer(canvas) {
   return {
     renderer,
     scene,
+    camera,
+    controls,
     /** Frames drawn so far — used to prove the render loop is alive. */
     get frameCount() { return frame; },
     get hasFace() { return Boolean(face); },

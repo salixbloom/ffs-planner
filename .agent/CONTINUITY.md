@@ -17,17 +17,20 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   for this repo. `gh` CLI is not installed.
 - 2026-10-24T20:15Z [TOOL] Docker CLI 28.1.1 / Compose v2.35.1 present; daemon NOT running
   (Docker Desktop stopped), so `docker compose build` is UNCONFIRMED.
-- 2026-10-25T05:35Z [CODE] SUPERSEDES the 05:10Z M0-only entry: M0 complete and deployed, M1 code
-  complete. Modules `js/{app,camera,viewer,landmarker,capture,facemesh}.js`. `window.__ffs`
-  exposes frameCount/cameraActive/hasFace/scaleMmPerUnit/captureState for automated checks.
+- 2026-10-25T06:20Z [CODE] SUPERSEDES the 05:35Z entry: M0-M2 code complete, M0/M1 confirmed on
+  device. Modules js/{app,camera,viewer,landmarker,capture,facemesh,regions,editor}.js.
+  window.__ffs exposes frameCount/cameraActive/hasFace/scaleMmPerUnit/captureState/edits plus
+  _internals.{viewer,editor} for automated checks.
 - 2026-10-25T05:20Z [USER] M0 confirmed on iPhone: face correct, mesh stable. Pages live at
   https://salixbloom.github.io/ffs-planner/ (200 [TOOL]).
 
 ## [PLANS]
 - 2026-10-24T20:15Z [USER] Next: connect to GitHub remote + minimal container (this task).
-- 2026-10-25T05:35Z [CODE] Next: M2 editor per PLAN.md - region landmark-index sets, drag along
-  surface normal with Gaussian falloff, symmetry toggle, before/after, per-region reset.
-  Geometry is already in mm, so M3 thresholds can read straight off it.
+- 2026-10-25T06:20Z [CODE] Next: M3 achievability zones - limits.json with placeholder per-region
+  thresholds, colour + message on crossing. Edits are already millimetre amounts per region id
+  (editor summary), which is exactly the shape the thresholds compare against.
+- 2026-10-25T06:20Z [CODE] M2 is unverified VISUALLY: the automation browser window was minimised
+  (viewport 0x0, screenshots timing out), so edits were checked numerically only.
 - 2026-10-25T05:35Z [CODE] Open follow-up: iris-derived scale reads ~5-8% small (see OUTCOMES).
   Do NOT fudge a correction factor from one sample; settle it with the reference-scan accuracy
   check that PLAN.md lists as the first post-MVP item.
@@ -58,6 +61,20 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   true anatomical orientation.
 - 2026-10-25T05:35Z [CODE] Mesh material is unlit MeshBasicMaterial, side DoubleSide: the texture
   already carries lighting and tessellation winding is not guaranteed consistent.
+- 2026-10-25T06:20Z [CODE] A region = seed landmark indices + radiusMm. Vertex weight is a
+  Gaussian (sigma = radius/2) on distance to the NEAREST seed, which suits elongated regions
+  (jawline) as well as compact ones (chin). Lips and brows use the exported MediaPipe
+  LIPS/EYEBROW sets; the rest use seeds verified against the captured geometry.
+- 2026-10-25T06:20Z [CODE] All vertices in a region move along ONE direction (the weighted mean
+  normal), not their own per-vertex normals, which would tear the mesh where curvature is high.
+- 2026-10-25T06:20Z [CODE] Edits are stored as mm per region id and never baked into the mesh;
+  displayed positions are always base + sum(edits). That is what gives exact compare/reset, and
+  is the form M4 needs to store edits separately from the scan.
+- 2026-10-25T06:20Z [CODE] Drag sensitivity is DELIBERATELY not 1:1 handle-follows-finger. One
+  screen height is ~300 mm at normal viewing distance, so tracking the finger made the smallest
+  nudge bigger than any realistic change (a 60 px drag gave -79 mm on the brow). Rate is now
+  DRAG_RADII_PER_SCREEN (2) x the radius of the region per canvas height; the screen projection
+  decides direction only.
 
 ## [PROGRESS]
 - 2026-10-24T20:15Z [CODE] Added `Dockerfile`, `nginx.conf`, `compose.yaml`, `.dockerignore`,
@@ -66,6 +83,8 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   `.nojekyll`, `README.md`.
 - 2026-10-25T05:35Z [CODE] Added M1: `js/landmarker.js`, `js/capture.js`, `js/facemesh.js`;
   viewer gained showFace/clearFace/setFrameCallback; capture button + progress bar.
+- 2026-10-25T06:20Z [CODE] Added M2: js/regions.js, js/editor.js; viewer exposes camera/controls;
+  editor UI (symmetry toggle, hold-to-compare, reset all, per-region reset).
 - 2026-10-25T04:42Z [TOOL] SUPERSEDES the 20:25Z UNCONFIRMED build entry: container verified.
   `docker compose up -d --build` succeeds (nginx 1.31.8); `GET http://localhost:8080/` → 200,
   `Content-Type: text/html; charset=utf-8`, `Cache-Control: no-store`. Bind-mount live edits are
@@ -93,6 +112,18 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   capture flow run ~30x slower than a foreground tab.
 - 2026-10-25T05:30Z [TOOL] MediaPipe wasm logs on every load, including one INFO line ("Created
   TensorFlow Lite XNNPACK delegate for CPU") that the console tags as an ERROR. Not a failure.
+- 2026-10-25T06:20Z [TOOL] Chrome reports innerWidth/innerHeight = 0 and canvas rects of 0x0 when
+  its window is minimised, while document.visibilityState still reads "visible" and
+  Page.captureScreenshot times out. Any pointer maths divided by those sizes yields NaN. To test
+  interaction anyway, set explicit px sizes on #stage and #gl: absolute lengths lay out anyway.
+- 2026-10-25T06:20Z [TOOL] MediaPipe exports FACE_LANDMARKS_LIPS / LEFT_EYE / RIGHT_EYE /
+  LEFT_EYEBROW / RIGHT_EYEBROW / LEFT_IRIS / RIGHT_IRIS / FACE_OVAL / CONTOURS / TESSELATION.
+  There is NO nose, cheek, jaw, forehead or chin set - those regions need seed indices verified
+  against real geometry.
+- 2026-10-25T06:20Z [TOOL] Verified landmark anchors (mm, +x = subject left, +y up, +z out of the
+  face, after the z fix): 4 nose tip (z +53), 152 chin bottom (y -87), 10 forehead top (y +87),
+  9 glabella (y +47), 205/425 cheeks (x -/+41), 172/397 jaw angle (x -/+60, z -30 near the ear),
+  136/365 jawline, 127/356 face sides (x -/+74).
 - 2026-10-24T20:15Z [ASSUMPTION] Camera needs a secure context. `http://localhost:8080` qualifies,
   but a phone reaching the container over a LAN IP does NOT — on-device testing goes through the
   HTTPS GitHub Pages deploy, not this container.
@@ -121,4 +152,24 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   RESIDUAL [ASSUMPTION]: scale still reads low against adult references (IPD 58.8 vs ~60-66,
   outer canthal 84.3 vs ~88-92, mouth width 52.8 within ~45-55) - roughly 5-8% small. Measured on
   ONE portrait of unknown true dimensions, so the bias is indicative, NOT established. Depth
-  (102 mm) is the least trustworthy axis, as PLAN.md's first risk predicts.
+  (102 mm) is the least trustworthy axis, as the first risk in PLAN.md predicts.
+- 2026-10-25T06:20Z [TOOL] M2 verified numerically against the same portrait capture. 10 regions
+  build with anatomically correct handles and directions. A real synthetic pointer drag through
+  the actual editor path (raycast -> setAmount -> rebuild -> UI) gives, for a 60 px drag:
+  forehead +5.8, nose +3.4, brow -3.1, chin -3.8, lower jaw -3.8, lips -2.1 mm; lateral regions
+  respond to sideways drags instead (cheeks 4.45/4.42, jaw angles 3.99/3.92 mm, left/right
+  symmetric). Max edge stretch 1.00-1.16 = no tearing. Symmetry on edits both sides, off edits
+  one. Hold-to-compare restores the base mesh EXACTLY (max delta 0.000 mm) and releasing restores
+  the edit; reset-all returns to pristine exactly; every position stays finite.
+  THREE BUGS FOUND AND FIXED:
+  (1) The captured mesh was depth-INVERTED - MediaPipe z grows away from the camera, so the nose
+      sat at z -53 behind the ears at +47 and vertex normals pointed INTO the face. It looked
+      correct only because the material is double-sided; dragging along the normal would have
+      pushed every feature inward. Fixed by negating z; nose now +53 with normal +1.
+  (2) A zero-sized canvas made every pointer calculation NaN, silently destroying the mesh with
+      no error and no way back (NaN fails the edit-list filter, so the UI looked empty). Now
+      guarded on both canvas size and non-finite amounts.
+  (3) Drag sensitivity exploded near the alignment clamp (60 px = -79 mm on the brow). See
+      DECISIONS - the rate is now tied to region radius.
+  NOT VERIFIED: how the edits LOOK. The automation window was minimised, so no screenshot was
+  possible; a human still needs to confirm the reshaping reads as plausible anatomy.

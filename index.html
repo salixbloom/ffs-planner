@@ -90,6 +90,51 @@
         background: #ffffff1f;
       }
 
+      #editor { margin-top: 10px; }
+      #editor[hidden] { display: none; }
+
+      #tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      #tools button {
+        margin: 0;
+        padding: 10px;
+        font-size: 13px;
+        color: var(--fg);
+        background: #ffffff1f;
+      }
+
+      #tools label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex: 0 0 auto;
+        padding: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      #edits {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--muted);
+      }
+
+      #edits li { display: flex; justify-content: space-between; gap: 12px; }
+      #edits button {
+        width: auto;
+        padding: 0 6px;
+        font: inherit;
+        color: var(--muted);
+        background: none;
+      }
+
       #progress {
         height: 4px;
         margin-top: 10px;
@@ -137,7 +182,7 @@
   </head>
 
   <body>
-    <div id="banner">M1 capture — placeholder limits, not medical advice</div>
+    <div id="banner">M2 editor — placeholder limits, not medical advice</div>
 
     <div id="stage">
       <video id="feed" playsinline muted autoplay></video>
@@ -148,6 +193,15 @@
       <button id="start" type="button">Start camera</button>
       <button id="capture" type="button" hidden>Capture face</button>
       <div id="progress" hidden><div id="bar"></div></div>
+
+      <div id="editor" hidden>
+        <div id="tools">
+          <label><input id="symmetry" type="checkbox" checked /> Symmetry</label>
+          <button id="before" type="button">Hold to compare</button>
+          <button id="resetAll" type="button">Reset all</button>
+        </div>
+        <ul id="edits"></ul>
+      </div>
       <p id="status">Camera off. Nothing leaves this device.</p>
       <ul id="diag"></ul>
     </div>

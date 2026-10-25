@@ -6,8 +6,8 @@ face data never leaves the device unless you export it.
 
 See [PLAN.md](PLAN.md) for scope and milestones, and `.agent/CONTINUITY.md` for current state.
 
-**Status: M1 (capture).** Start the camera, hold still looking straight ahead, and a textured 3D
-face mesh is built from averaged MediaPipe landmarks. Region editing lands in M2.
+**Status: M2 (editor).** Start the camera, hold still looking straight ahead, then drag the
+handles to reshape ten face regions. Achievability zones land in M3.
 
 Scale comes from iris width (assumed 11.7 mm) and is approximate: measured against a reference
 portrait it reads roughly 5-8% small, and MediaPipe's depth axis is not metric at all.
@@ -47,6 +47,8 @@ No build step. Plain ES modules with an import map; dependencies load from jsDel
 | `js/landmarker.js` | MediaPipe Face Landmarker setup, head pose |
 | `js/capture.js` | guided hold-still capture and landmark averaging |
 | `js/facemesh.js` | landmarks to a textured mesh in millimetres |
+| `js/regions.js` | region seed landmarks and Gaussian vertex weights |
+| `js/editor.js` | handle dragging, symmetry, compare, reset |
 | `Dockerfile`, `compose.yaml`, `nginx.conf` | local static server |
 
 ## Licence

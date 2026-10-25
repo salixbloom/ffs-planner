@@ -56,9 +56,13 @@ export function tessellationIndices() {
  * Converts normalized landmarks to isotropic units (1 = image height).
  * MediaPipe normalizes x by width and y by height, and z on roughly the same
  * scale as x, so x and z need the aspect correction to stay square.
+ *
+ * MediaPipe's z grows away from the camera; three.js looks down -z. Negating
+ * it puts the nose nearest the viewer, which makes the surface normals point
+ * out of the face rather than into it — the editor depends on that.
  */
 function toIsotropic(landmark, aspect) {
-  return [(landmark.x - 0.5) * aspect, -(landmark.y - 0.5), (landmark.z ?? 0) * aspect];
+  return [(landmark.x - 0.5) * aspect, -(landmark.y - 0.5), -(landmark.z ?? 0) * aspect];
 }
 
 /**

@@ -10,8 +10,9 @@ import { createViewer, describeRenderer } from './viewer.js';
 import { createLandmarker } from './landmarker.js';
 import { createCaptureSession, CAPTURE_PROMPTS } from './capture.js';
 import { buildFaceGeometry, captureTexture, estimateMmPerUnit } from './facemesh.js';
+import { createEditor } from './editor.js';
 
-const APP_VERSION = '0.2.0-m1';
+const APP_VERSION = '0.3.0-m2';
 
 const els = {
   feed: document.querySelector('#feed'),
@@ -22,12 +23,18 @@ const els = {
   bar: document.querySelector('#bar'),
   status: document.querySelector('#status'),
   diag: document.querySelector('#diag'),
+  editor: document.querySelector('#editor'),
+  symmetry: document.querySelector('#symmetry'),
+  before: document.querySelector('#before'),
+  resetAll: document.querySelector('#resetAll'),
+  edits: document.querySelector('#edits'),
 };
 
 let viewer;
 let stream;
 let landmarker;
 let session;
+let editor;
 let scaleMmPerUnit = null;
 
 function setStatus(text, isError = false) {
@@ -72,6 +79,37 @@ function onCaptureUpdate({ state, progress }) {
   setProgress(progress);
 }
 
+/** One row per edited region, each with its own reset. */
+function renderEdits({ edits }) {
+  els.edits.replaceChildren(
+    ...edits.map(({ id, label, mm }) => {
+      const li = document.createElement('li');
+      const text = document.createElement('span');
+      text.textContent = `${label}: ${mm > 0 ? '+' : ''}${mm.toFixed(1)} mm`;
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.textContent = 'reset';
+      reset.addEventListener('click', () => editor.reset(id));
+      li.append(text, reset);
+      return li;
+    }),
+  );
+}
+
+function startEditing(mesh) {
+  editor?.dispose();
+  editor = createEditor({ viewer, mesh, onChange: renderEdits });
+  els.editor.hidden = false;
+  editor.setSymmetry(els.symmetry.checked);
+}
+
+function stopEditing() {
+  editor?.dispose();
+  editor = null;
+  els.editor.hidden = true;
+  els.edits.replaceChildren();
+}
+
 function onCaptureComplete({ landmarks, frames }) {
   const aspect = els.feed.videoWidth / els.feed.videoHeight;
   scaleMmPerUnit = estimateMmPerUnit(landmarks, aspect);
@@ -84,13 +122,13 @@ function onCaptureComplete({ landmarks, frames }) {
 
   const texture = captureTexture(els.feed);
   const geometry = buildFaceGeometry(landmarks, aspect, scaleMmPerUnit);
-  viewer.showFace(geometry, texture);
+  const mesh = viewer.showFace(geometry, texture);
 
   endCapture();
   els.feed.hidden = true; // the mesh replaces the live view
   els.capture.textContent = 'Retake';
-  const height = geometry.boundingSphere.radius * 2;
-  setStatus(`Captured from ${frames} frames · about ${height.toFixed(0)} mm across (approximate).`);
+  startEditing(mesh);
+  setStatus(`Captured from ${frames} frames. Drag a handle to reshape a region.`);
 }
 
 function endCapture() {
@@ -103,6 +141,7 @@ function endCapture() {
 
 async function onCapture() {
   if (viewer.hasFace) {
+    stopEditing();
     viewer.clearFace();
     els.feed.hidden = false;
     els.capture.textContent = 'Capture face';
@@ -146,6 +185,7 @@ async function onStart() {
 
 function onStop() {
   endCapture();
+  stopEditing();
   stopCamera(stream);
   stream = undefined;
   els.feed.srcObject = null;
@@ -160,6 +200,15 @@ function onStop() {
 
 els.start.addEventListener('click', () => (stream ? onStop() : onStart()));
 els.capture.addEventListener('click', onCapture);
+els.symmetry.addEventListener('change', () => editor?.setSymmetry(els.symmetry.checked));
+els.resetAll.addEventListener('click', () => editor?.resetAll());
+
+// Press and hold to see the unedited scan, so comparison needs no extra state.
+for (const [event, showBase] of [
+  ['pointerdown', true], ['pointerup', false], ['pointerleave', false], ['pointercancel', false],
+]) {
+  els.before.addEventListener(event, () => editor?.setShowBase(showBase));
+}
 
 // Safari drops camera tracks when the tab is backgrounded; surface that rather
 // than leaving a frozen frame on screen.
@@ -189,5 +238,9 @@ window.__ffs = {
   get hasFace() { return Boolean(viewer?.hasFace); },
   get scaleMmPerUnit() { return scaleMmPerUnit; },
   get captureState() { return session?.state ?? 'idle'; },
-  _internals: { get viewer() { return viewer; } },
+  get edits() { return editor?.summary.edits ?? []; },
+  _internals: {
+    get viewer() { return viewer; },
+    get editor() { return editor; },
+  },
 };
