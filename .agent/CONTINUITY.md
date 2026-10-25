@@ -31,10 +31,17 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   unpinned (`alpine`) rather than guessing a specific nginx version.
 - 2026-10-24T20:15Z [ASSUMPTION] Site root = repo root (GitHub Pages serves from root per PLAN.md),
   so the container's document root is the repo root too.
+- 2026-10-24T20:25Z [CODE] `.gitattributes` sets `* text=auto eol=lf`; the Dockerfile and nginx.conf
+  are read inside Linux, so CRLF checkout on Windows is not acceptable.
 
 ## [PROGRESS]
 - 2026-10-24T20:15Z [CODE] Added `Dockerfile`, `nginx.conf`, `compose.yaml`, `.dockerignore`,
   `.gitignore`, placeholder `index.html`, this file.
+- 2026-10-24T20:25Z [TOOL] `docker compose config` parses clean. `docker compose build` and nginx
+  config syntax remain UNCONFIRMED (daemon down).
+- 2026-10-24T20:25Z [TOOL] Two commits on `main`, both local. `git push --dry-run -u origin main`
+  → "Repository not found" (same as ls-remote). Push is blocked until the remote exists and the
+  authenticating key has access.
 
 ## [DISCOVERIES]
 - 2026-10-24T20:15Z [TOOL] SSH identity (Sinuboh) ≠ git commit identity (salixbloom). Pushes may
