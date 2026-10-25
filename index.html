@@ -11,7 +11,8 @@
       {
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+          "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/vision_bundle.mjs"
         }
       }
     </script>
@@ -69,7 +70,7 @@
         border-top: 1px solid #ffffff1f;
       }
 
-      #start {
+      button {
         appearance: none;
         width: 100%;
         padding: 14px;
@@ -81,7 +82,28 @@
         border-radius: 10px;
       }
 
-      #start:disabled { opacity: .5; }
+      button:disabled { opacity: .5; }
+
+      #capture {
+        margin-top: 8px;
+        color: var(--fg);
+        background: #ffffff1f;
+      }
+
+      #progress {
+        height: 4px;
+        margin-top: 10px;
+        border-radius: 2px;
+        background: #ffffff1f;
+        overflow: hidden;
+      }
+
+      #bar {
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        transition: width .1s linear;
+      }
 
       #status {
         margin: 10px 0 0;
@@ -115,7 +137,7 @@
   </head>
 
   <body>
-    <div id="banner">M0 skeleton — placeholder limits, not medical advice</div>
+    <div id="banner">M1 capture — placeholder limits, not medical advice</div>
 
     <div id="stage">
       <video id="feed" playsinline muted autoplay></video>
@@ -124,6 +146,8 @@
 
     <div id="panel">
       <button id="start" type="button">Start camera</button>
+      <button id="capture" type="button" hidden>Capture face</button>
+      <div id="progress" hidden><div id="bar"></div></div>
       <p id="status">Camera off. Nothing leaves this device.</p>
       <ul id="diag"></ul>
     </div>

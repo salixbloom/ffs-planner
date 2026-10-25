@@ -1,31 +1,54 @@
 /**
- * M0 entry point: prove the camera feed and a WebGL overlay both work on the
- * target device. Everything here runs client-side; no network calls are made
- * beyond loading the modules themselves.
+ * Entry point: camera, guided face capture, and the 3D viewer.
+ *
+ * Everything runs client-side. The only network traffic is loading the
+ * modules, the MediaPipe runtime and the landmark model.
  */
 
 import { startCamera, stopCamera, describeStream } from './camera.js';
 import { createViewer, describeRenderer } from './viewer.js';
+import { createLandmarker } from './landmarker.js';
+import { createCaptureSession, CAPTURE_PROMPTS } from './capture.js';
+import { buildFaceGeometry, captureTexture, estimateMmPerUnit } from './facemesh.js';
 
-const APP_VERSION = '0.1.0-m0';
+const APP_VERSION = '0.2.0-m1';
 
 const els = {
   feed: document.querySelector('#feed'),
   canvas: document.querySelector('#gl'),
   start: document.querySelector('#start'),
+  capture: document.querySelector('#capture'),
+  progress: document.querySelector('#progress'),
+  bar: document.querySelector('#bar'),
   status: document.querySelector('#status'),
   diag: document.querySelector('#diag'),
 };
 
 let viewer;
 let stream;
+let landmarker;
+let session;
+let scaleMmPerUnit = null;
 
 function setStatus(text, isError = false) {
   els.status.textContent = text;
   els.status.classList.toggle('error', isError);
 }
 
-function setDiagnostics(rows) {
+function setProgress(fraction) {
+  els.progress.hidden = fraction === null;
+  els.bar.style.width = `${Math.round((fraction ?? 0) * 100)}%`;
+}
+
+function refreshDiagnostics() {
+  const rows = [
+    ['version', APP_VERSION],
+    ['secure context', String(window.isSecureContext)],
+    ['renderer', viewer ? describeRenderer(viewer.renderer) : 'not started'],
+    ['camera', stream ? describeStream(stream) : 'off'],
+    ['model', landmarker ? 'loaded' : 'not loaded'],
+    ['scale', scaleMmPerUnit ? `${scaleMmPerUnit.toFixed(1)} mm/unit (approx, from iris)` : '—'],
+  ];
   els.diag.replaceChildren(
     ...rows.map(([label, value]) => {
       const li = document.createElement('li');
@@ -35,17 +58,73 @@ function setDiagnostics(rows) {
   );
 }
 
-function baseDiagnostics() {
-  return [
-    ['version', APP_VERSION],
-    ['secure context', String(window.isSecureContext)],
-    ['renderer', viewer ? describeRenderer(viewer.renderer) : 'not started'],
-    ['camera', stream ? describeStream(stream) : 'off'],
-  ];
+/** The landmark model is several MB; load it once, on demand. */
+async function ensureLandmarker() {
+  if (landmarker) return landmarker;
+  setStatus('Loading the face model (a few MB, first time only)…');
+  landmarker = await createLandmarker();
+  refreshDiagnostics();
+  return landmarker;
 }
 
-function refreshDiagnostics() {
-  setDiagnostics(baseDiagnostics());
+function onCaptureUpdate({ state, progress }) {
+  setStatus(CAPTURE_PROMPTS[state] ?? state);
+  setProgress(progress);
+}
+
+function onCaptureComplete({ landmarks, frames }) {
+  const aspect = els.feed.videoWidth / els.feed.videoHeight;
+  scaleMmPerUnit = estimateMmPerUnit(landmarks, aspect);
+
+  if (!scaleMmPerUnit) {
+    setStatus('Could not measure iris width — try again in better light.', true);
+    endCapture();
+    return;
+  }
+
+  const texture = captureTexture(els.feed);
+  const geometry = buildFaceGeometry(landmarks, aspect, scaleMmPerUnit);
+  viewer.showFace(geometry, texture);
+
+  endCapture();
+  els.feed.hidden = true; // the mesh replaces the live view
+  els.capture.textContent = 'Retake';
+  const height = geometry.boundingSphere.radius * 2;
+  setStatus(`Captured from ${frames} frames · about ${height.toFixed(0)} mm across (approximate).`);
+}
+
+function endCapture() {
+  session?.cancel();
+  session = null;
+  viewer.setFrameCallback(null);
+  setProgress(null);
+  refreshDiagnostics();
+}
+
+async function onCapture() {
+  if (viewer.hasFace) {
+    viewer.clearFace();
+    els.feed.hidden = false;
+    els.capture.textContent = 'Capture face';
+    setStatus('Camera running. Drag to orbit.');
+    return;
+  }
+
+  els.capture.disabled = true;
+  try {
+    await ensureLandmarker();
+    session = createCaptureSession({
+      landmarker,
+      video: els.feed,
+      onUpdate: onCaptureUpdate,
+      onComplete: onCaptureComplete,
+    });
+    viewer.setFrameCallback((time) => session?.tick(time));
+  } catch (err) {
+    setStatus(`Face model failed to load: ${err?.message || err}`, true);
+  } finally {
+    els.capture.disabled = false;
+  }
 }
 
 async function onStart() {
@@ -53,8 +132,9 @@ async function onStart() {
   setStatus('Requesting camera permission…');
   try {
     stream = await startCamera(els.feed);
-    setStatus('Camera running. Drag to orbit the test mesh.');
+    setStatus('Camera running. Drag to orbit.');
     els.start.textContent = 'Stop camera';
+    els.capture.hidden = false;
   } catch (err) {
     setStatus(err.message, true);
     els.start.textContent = 'Start camera';
@@ -65,15 +145,21 @@ async function onStart() {
 }
 
 function onStop() {
+  endCapture();
   stopCamera(stream);
   stream = undefined;
   els.feed.srcObject = null;
+  els.feed.hidden = false;
+  els.capture.hidden = true;
+  els.capture.textContent = 'Capture face';
+  viewer.clearFace();
   els.start.textContent = 'Start camera';
   setStatus('Camera off. Nothing leaves this device.');
   refreshDiagnostics();
 }
 
 els.start.addEventListener('click', () => (stream ? onStop() : onStart()));
+els.capture.addEventListener('click', onCapture);
 
 // Safari drops camera tracks when the tab is backgrounded; surface that rather
 // than leaving a frozen frame on screen.
@@ -95,10 +181,13 @@ try {
 
 refreshDiagnostics();
 
-// Exposed so the render loop and camera state can be asserted from the console
-// or an automated browser check.
+// Exposed so state can be asserted from the console or an automated check.
 window.__ffs = {
   version: APP_VERSION,
   get frameCount() { return viewer?.frameCount ?? 0; },
   get cameraActive() { return Boolean(stream); },
+  get hasFace() { return Boolean(viewer?.hasFace); },
+  get scaleMmPerUnit() { return scaleMmPerUnit; },
+  get captureState() { return session?.state ?? 'idle'; },
+  _internals: { get viewer() { return viewer; } },
 };

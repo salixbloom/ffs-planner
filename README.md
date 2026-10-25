@@ -6,8 +6,11 @@ face data never leaves the device unless you export it.
 
 See [PLAN.md](PLAN.md) for scope and milestones, and `.agent/CONTINUITY.md` for current state.
 
-**Status: M0 (skeleton).** The page shows the live camera feed with a three.js test mesh over it.
-Face capture lands in M1.
+**Status: M1 (capture).** Start the camera, hold still looking straight ahead, and a textured 3D
+face mesh is built from averaged MediaPipe landmarks. Region editing lands in M2.
+
+Scale comes from iris width (assumed 11.7 mm) and is approximate: measured against a reference
+portrait it reads roughly 5-8% small, and MediaPipe's depth axis is not metric at all.
 
 > Achievability limits are placeholders, not medical advice.
 
@@ -41,6 +44,9 @@ No build step. Plain ES modules with an import map; dependencies load from jsDel
 | `js/app.js` | entry point, UI wiring, diagnostics |
 | `js/camera.js` | `getUserMedia` capture and error messages |
 | `js/viewer.js` | three.js scene over the feed |
+| `js/landmarker.js` | MediaPipe Face Landmarker setup, head pose |
+| `js/capture.js` | guided hold-still capture and landmark averaging |
+| `js/facemesh.js` | landmarks to a textured mesh in millimetres |
 | `Dockerfile`, `compose.yaml`, `nginx.conf` | local static server |
 
 ## Licence
