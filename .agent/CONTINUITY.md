@@ -28,6 +28,12 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   https://salixbloom.github.io/ffs-planner/ (200 [TOOL]).
 
 ## [PLANS]
+- 2026-10-25T08:30Z [USER] DIRECTION SET: pull PLAN.md post-MVP item 3 (model fitting) forward,
+  using FLAME 2023, and leave item 2 (photogrammetry mesh import) where it is. The jaw problem is
+  topology, not scanning. NEXT BLOCKER: there is no MediaPipe-468 -> FLAME-5023 landmark
+  correspondence yet, and the FLAME zip ships none - that mapping must be sourced or derived
+  before any fitting can run. After fitting lands, M2's regions must be redefined on FLAME
+  topology (the current seed indices are MediaPipe indices and do NOT transfer).
 - 2026-10-24T20:15Z [USER] Next: connect to GitHub remote + minimal container (this task).
 - 2026-10-25T06:20Z [CODE] Next: M3 achievability zones - limits.json with placeholder per-region
   thresholds, colour + message on crossing. Edits are already millimetre amounts per region id
@@ -39,6 +45,17 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   check that PLAN.md lists as the first post-MVP item.
 
 ## [DECISIONS]
+- 2026-10-25T08:30Z [USER] Ship 100 identity components and COMMIT the derived binary to the repo
+  (rather than have contributors generate it). Attribution in both README and in-app.
+- 2026-10-25T08:30Z [USER] No per-region measured/inferred tiers for now - a single blanket
+  warning in the panel instead. KNOWN TRADE, raised and accepted: the warning cannot distinguish
+  inferred jaw geometry from measured face geometry, so jaw numbers will look exactly as
+  trustworthy as nose numbers.
+- 2026-10-25T08:30Z [CODE] Do NOT ship the FLAME texture space: 1.2 GB, and pointless here since
+  the texture is the captured camera frame. Its licence may also differ from FLAME 2023's CC-BY.
+- 2026-10-25T08:30Z [CODE] `.gitattributes` must keep `*.bin binary`. The repo-wide
+  `* text=auto eol=lf` would otherwise risk line-ending translation on model data, which fails
+  silently and far from the cause.
 - 2026-10-24T20:15Z [USER] Use `git@github.com:salixbloom/ffs-planner.git` as origin.
 - 2026-10-24T20:15Z [USER] Add a minimal container despite the no-build-step stack; it serves the
   repo root as a static site rather than building anything.
@@ -107,6 +124,29 @@ ambitious each change is. No backend. MVP = PLAN.md M0–M4 working end to end o
   no force-push. Pushed to `origin/main`.
 
 ## [DISCOVERIES]
+- 2026-10-25T08:30Z [TOOL] FLAME 2023 (flame2023_Open.pkl, 53 MB) inspected directly: 5023
+  vertices, 9976 faces, metres. Arrays: shapedirs (5023,3,400) float64 = 48.2 MB (91% of the
+  file), posedirs (5023,3,36) = 4.3 MB, v_template/weights/f/J/J_regressor all < 0.5 MB.
+  Model metadata states `expr_components = last_100`, `n_expr = 100`, so shapedirs[:,:,:300] is
+  identity and the last 100 are expression - VERIFIED from the file, not assumed. The expression
+  basis is `expr_source = SUPR_head`, `supr_gender = male`: irrelevant to identity shape, but
+  worth weighing when expressions arrive in a feminisation tool.
+- 2026-10-25T08:30Z [TOOL] Shipped basis = first 100 identity components as float32 + template +
+  uint16 faces = 6.15 MB. Round-trip verified against the pickle: byte count exact, template err
+  7.5e-9 m, basis err 4.6e-10 m, faces identical, max index 5022 < 5023. Template extent
+  217.6 x 319.4 x 228.3 mm - a full head WITH neck, which is the point.
+- 2026-10-25T08:30Z [TOOL] Component contribution falls off fast: at 3 sigma, component 0 moves
+  the surface 10.0 mm mean / 31.2 mm max, component 50 is 0.38/2.24 mm, component 99 is
+  0.19/1.35 mm. Past ~50 the components contribute less than this pipeline's own scale bias
+  (5-8%), so 100 is generous and truncation costs nothing measurable.
+- 2026-10-25T08:30Z [TOOL] FLAME downloads are account-gated (flame.is.tue.mpg.de/download.php),
+  so the model cannot be fetched unattended; the zip must come from a human login.
+- 2026-10-25T08:30Z [TOOL] NoW benchmark figures for context, NOT a forecast for this pipeline:
+  MICA 0.90 mm median non-metrical / 1.08 mm metrical, DECA 1.09 / 1.35 mm. These are learned
+  networks using the whole image, scored after rigid alignment on a face-region mask, and the
+  non-metrical numbers permit rescaling during alignment - which hides exactly the scale error
+  this project has. A browser-side landmark-only fit will do worse, and the jaw periphery and
+  neck are barely evaluated by that benchmark at all.
 - 2026-10-25T07:40Z [USER] The MediaPipe mesh is a face MASK bounded by the face oval - no skull,
   ramus, neck or back of head. Pushing a region seeded on that rim moves the mesh's free edge
   (a flange), not a volume, so jaw edits are not predictable. CONFIRMED by seed membership:

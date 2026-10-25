@@ -1,2 +1,9 @@
 # Keep LF in the working copy: these files are consumed inside Linux containers.
 * text=auto eol=lf
+
+# Never apply line-ending translation to model data. `text=auto` would almost
+# certainly detect these as binary on its own, but a corrupted float array
+# fails silently and far from the cause, so say it explicitly.
+*.bin binary
+*.pkl binary
+

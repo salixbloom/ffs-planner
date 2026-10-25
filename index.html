@@ -24,6 +24,7 @@
         --muted: #9aa4b2;
         --accent: #5b9cff;
         --bad: #ff6b6b;
+        --warn: #ffc14d;
       }
 
       * { box-sizing: border-box; }
@@ -196,6 +197,24 @@
 
       #status.error { color: var(--bad); }
 
+      #warning {
+        margin: 0 0 10px;
+        padding: 9px 11px;
+        border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--warn) 12%, transparent);
+        color: var(--warn);
+        font-size: 13px;
+      }
+
+      #credits {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      #credits a { color: inherit; }
+
       #diag {
         margin: 8px 0 0;
         padding: 0;
@@ -229,6 +248,12 @@
               aria-label="Drag to resize the controls, or tap to collapse them"></button>
 
       <div id="panelBody">
+        <p id="warning">
+          Measurements may not be accurate. Every number here is approximate —
+          scale is estimated from iris width, depth is not measured reliably, and
+          parts of the head are inferred rather than scanned.
+        </p>
+
         <button id="start" type="button">Start camera</button>
         <button id="capture" type="button" hidden>Capture face</button>
         <div id="progress" hidden><div id="bar"></div></div>
@@ -243,6 +268,15 @@
         </div>
         <p id="status">Camera off. Nothing leaves this device.</p>
         <ul id="diag"></ul>
+
+        <p id="credits">
+          Head model:
+          <a href="https://flame.is.tue.mpg.de/" target="_blank" rel="noopener">FLAME 2023</a>,
+          Max Planck Institute for Intelligent Systems, licensed
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
+          Modified: truncated to 100 identity components, expression and pose
+          components removed, converted to 32-bit floats.
+        </p>
       </div>
     </div>
 

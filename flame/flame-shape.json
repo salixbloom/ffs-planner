@@ -1,0 +1,40 @@
+{
+  "source": "FLAME 2023 (flame2023_Open.pkl), CC-BY 4.0",
+  "modified": "identity components truncated from 300 to 100; expression components (100) and pose correctives dropped; float64 converted to float32; face indices converted to uint16",
+  "vertices": 5023,
+  "faces": 9976,
+  "components": 100,
+  "units": "metres",
+  "templateExtent": [
+    0.2176,
+    0.3194,
+    0.2283
+  ],
+  "layout": [
+    {
+      "name": "template",
+      "type": "float32",
+      "shape": [
+        5023,
+        3
+      ]
+    },
+    {
+      "name": "shapeBasis",
+      "type": "float32",
+      "shape": [
+        5023,
+        3,
+        100
+      ]
+    },
+    {
+      "name": "faces",
+      "type": "uint16",
+      "shape": [
+        9976,
+        3
+      ]
+    }
+  ]
+}
